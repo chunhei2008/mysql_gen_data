@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"math/rand"
 	"strings"
 	"time"
@@ -26,7 +27,7 @@ func NewGen() *Gen {
 //区间随机数生成器
 func (g *Gen) gen_varint(min, max int) chan interface{} {
 	ch := make(chan interface{}, 100)
-	go func(min, max int) {
+	go func() {
 		if max < min || max <= 0 || min < 0 {
 			ch <- 0
 		} else {
@@ -37,14 +38,14 @@ func (g *Gen) gen_varint(min, max int) chan interface{} {
 				ch <- rands
 			}
 		}
-	}(min, max)
+	}()
 	return ch
 }
 
 //区间随机数生成器
 func (g *Gen) gen_int(max int) chan interface{} {
 	ch := make(chan interface{}, 100)
-	go func(max int) {
+	go func() {
 		if max <= 0 {
 			for i := 0; ; i++ {
 				ch <- 0
@@ -56,14 +57,14 @@ func (g *Gen) gen_int(max int) chan interface{} {
 				ch <- rands
 			}
 		}
-	}(max)
+	}()
 	return ch
 }
 
 //定长字符生成器
 func (g *Gen) gen_char(length int) chan interface{} {
-	ch := make(chan interface{}, 100)
-	go func(length int) {
+	ch := make(chan interface{})
+	go func() {
 		if length <= 0 {
 			for i := 0; ; i++ {
 				ch <- ""
@@ -74,23 +75,23 @@ func (g *Gen) gen_char(length int) chan interface{} {
 				str = strings.Repeat(str, re+1)
 			}
 			for i := 0; ; i++ {
-				randstr := ""
+				buffer := bytes.NewBuffer([]byte{})
 				rand.Seed(<-g.seed)
 				rands := rand.Perm(len(str))
 				for i := 0; i < length; i++ {
-					randstr += str[rands[i] : rands[i]+1]
+					buffer.WriteString(str[rands[i] : rands[i]+1])
 				}
-				ch <- randstr
+				ch <- buffer.String()
 			}
 		}
-	}(length)
+	}()
 	return ch
 }
 
 //变长字符生成器
 func (g *Gen) gen_varchar(min, max int) chan interface{} {
-	ch := make(chan interface{}, 100)
-	go func(min, max int) {
+	ch := make(chan interface{})
+	go func() {
 		if max < min || min <= 0 || max <= 0 {
 			for i := 0; ; i++ {
 				ch <- ""
@@ -102,24 +103,24 @@ func (g *Gen) gen_varchar(min, max int) chan interface{} {
 			}
 			span := max - min
 			for i := 0; ; i++ {
-				randstr := ""
+				randstr := bytes.NewBuffer([]byte{})
 				rand.Seed(<-g.seed)
 				seed := rand.Intn(span)
 				rands := rand.Perm(len(str))
 				for i := 0; i < min+seed; i++ {
-					randstr += str[rands[i] : rands[i]+1]
+					randstr.WriteString(str[rands[i] : rands[i]+1])
 				}
-				ch <- randstr
+				ch <- randstr.String()
 			}
 		}
-	}(min, max)
+	}()
 	return ch
 }
 
 //以基数自增
 func (g *Gen) gen_autoincr(base int) chan interface{} {
 	ch := make(chan interface{}, 1024)
-	go func(base int) {
+	go func() {
 		if base < 0 {
 			base = 0
 		}
@@ -127,6 +128,6 @@ func (g *Gen) gen_autoincr(base int) chan interface{} {
 		for ; ; i++ {
 			ch <- i
 		}
-	}(base)
+	}()
 	return ch
 }
